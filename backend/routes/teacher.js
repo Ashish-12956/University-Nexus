@@ -46,6 +46,23 @@ router.get('/profile/:email', async (req, res) => {
   try {
     const { email } = req.params;
 
+    // Input validation
+    if (!email || typeof email !== 'string' || email.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Valid email is required'
+      });
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid email format'
+      });
+    }
+
     // Verify the teacher is accessing their own profile
     if (req.user.email !== email) {
       return res.status(403).json({
@@ -277,6 +294,23 @@ router.get('/attendance-stats/:email', async (req, res) => {
 router.put('/profile/:email', async (req, res) => {
   try {
     const { email } = req.params;
+
+    // Input validation
+    if (!email || typeof email !== 'string' || email.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Valid email is required'
+      });
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid email format'
+      });
+    }
 
     // Verify the teacher is updating their own profile
     if (req.user.email !== email) {

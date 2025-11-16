@@ -74,10 +74,44 @@ router.post('/create-all', verifyFacultyAccess, async (req, res) => {
   try {
     const { emailId, subjectName, subjectCode, credits } = req.body;
 
-    if (!emailId || !subjectName || !subjectCode || !credits) {
+    // Enhanced input validation
+    if (!emailId || !subjectName || !subjectCode || credits === undefined || credits === null) {
       return res.status(400).json({
         status: 'error',
         message: 'Email ID, subject name, subject code, and credits are required'
+      });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid email format'
+      });
+    }
+
+    // String validations
+    if (typeof subjectName !== 'string' || subjectName.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Subject name must be a non-empty string'
+      });
+    }
+
+    if (typeof subjectCode !== 'string' || subjectCode.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Subject code must be a non-empty string'
+      });
+    }
+
+    // Credits validation
+    const creditsNum = parseFloat(credits);
+    if (isNaN(creditsNum) || creditsNum < 0 || creditsNum > 10) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Credits must be a number between 0 and 10'
       });
     }
 
@@ -112,10 +146,61 @@ router.post('/create-specific', verifyFacultyAccess, async (req, res) => {
   try {
     const { emailId, subjectName, subjectCode, credits, studentEmails } = req.body;
 
-    if (!emailId || !subjectName || !subjectCode || !credits || !studentEmails || !Array.isArray(studentEmails)) {
+    // Enhanced input validation
+    if (!emailId || !subjectName || !subjectCode || credits === undefined || credits === null || !studentEmails || !Array.isArray(studentEmails)) {
       return res.status(400).json({
         status: 'error',
         message: 'Email ID, subject name, subject code, credits, and student emails array are required'
+      });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid faculty email format'
+      });
+    }
+
+    // Validate all student emails
+    if (studentEmails.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'At least one student email is required'
+      });
+    }
+
+    for (const email of studentEmails) {
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Invalid student email format: ${email}`
+        });
+      }
+    }
+
+    // String validations
+    if (typeof subjectName !== 'string' || subjectName.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Subject name must be a non-empty string'
+      });
+    }
+
+    if (typeof subjectCode !== 'string' || subjectCode.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Subject code must be a non-empty string'
+      });
+    }
+
+    // Credits validation
+    const creditsNum = parseFloat(credits);
+    if (isNaN(creditsNum) || creditsNum < 0 || creditsNum > 10) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Credits must be a number between 0 and 10'
       });
     }
 
@@ -254,10 +339,26 @@ router.post('/:enrollmentId/add-student', verifyFacultyAccess, async (req, res) 
     const { enrollmentId } = req.params;
     const { studentEmail } = req.body;
 
-    if (!studentEmail) {
+    // Input validation
+    if (!enrollmentId || isNaN(parseInt(enrollmentId))) {
       return res.status(400).json({
         status: 'error',
-        message: 'Student email is required'
+        message: 'Valid enrollment ID is required'
+      });
+    }
+
+    if (!studentEmail || typeof studentEmail !== 'string' || studentEmail.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Student email is required and must be a non-empty string'
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(studentEmail)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid student email format'
       });
     }
 

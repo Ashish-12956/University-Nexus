@@ -101,30 +101,57 @@ class AdminService {
    */
   async uploadDetailsOfStudentsBulk(filePath) {
     try {
+      // Validate file path
+      if (!filePath || typeof filePath !== 'string') {
+        throw new Error('File path is required');
+      }
+
       const csvData = await this.parseCsv(filePath);
+      
+      if (!csvData || csvData.length === 0) {
+        throw new Error('CSV file is empty or invalid');
+      }
+
       const students = [];
 
       for (const row of csvData) {
+        // Validate required fields
+        if (!row.name || !row.emailId || !row.contactNo) {
+          throw new Error(`Missing required fields in CSV row: name, emailId, or contactNo`);
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(row.emailId)) {
+          throw new Error(`Invalid email format in CSV: ${row.emailId}`);
+        }
+
+        // Validate contact number
+        const contactNo = parseInt(row.contactNo);
+        if (isNaN(contactNo) || contactNo <= 0) {
+          throw new Error(`Invalid contact number in CSV: ${row.contactNo}`);
+        }
+
         const studentData = {
-          name: row.name,
-          course: row.course,
-          branch: row.branch,
-          semester: parseInt(row.semester),
-          year: parseInt(row.year),
-          enrollmentCode: row.enrollmentCode,
+          name: row.name.trim(),
+          course: row.course || 'N/A',
+          branch: row.branch || 'GEN',
+          semester: parseInt(row.semester) || 1,
+          year: parseInt(row.year) || 1,
+          enrollmentCode: row.enrollmentCode || '',
           enrollmentCompleted: row.enrollmentCompleted === 'true',
-          rollNo: row.rollNo,
-          dob: row.dob,
-          contactNo: parseInt(row.contactNo),
-          address: row.address,
-          gender: row.gender,
-          nationality: row.nationality,
-          bloodGroup: row.bloodGroup,
-          parentContactNo: parseInt(row.parentContactNo),
-          parentName: row.parentName,
-          parentOccupation: row.parentOccupation,
-          email: row.emailId,
-          univId: this.generateUnivId(row.name, parseInt(row.contactNo))
+          rollNo: row.rollNo || '',
+          dob: row.dob || null,
+          contactNo: contactNo,
+          address: row.address || '',
+          gender: row.gender || 'Not Specified',
+          nationality: row.nationality || '',
+          bloodGroup: row.bloodGroup || '',
+          parentContactNo: parseInt(row.parentContactNo) || contactNo,
+          parentName: row.parentName || '',
+          parentOccupation: row.parentOccupation || '',
+          email: row.emailId.trim(),
+          univId: this.generateUnivId(row.name, contactNo)
         };
 
         students.push(studentData);
@@ -167,6 +194,25 @@ class AdminService {
    * @returns {Promise<Object>} Created student
    */
   async uploadStudentDetail(studentData) {
+    // Input validation
+    if (!studentData || typeof studentData !== 'object') {
+      throw new Error('Student data is required');
+    }
+
+    if (!studentData.email || typeof studentData.email !== 'string') {
+      throw new Error('Valid email is required');
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(studentData.email)) {
+      throw new Error('Invalid email format');
+    }
+
+    if (!studentData.name || typeof studentData.name !== 'string' || studentData.name.trim().length === 0) {
+      throw new Error('Valid name is required');
+    }
+
     // Check if email already exists
     const existingStudent = await Student.findOne({
       where: { email: studentData.email }
@@ -228,6 +274,34 @@ class AdminService {
    * @returns {Promise<Object>} Created faculty
    */
   async uploadFacultyDetail(facultyData) {
+    // Input validation
+    if (!facultyData || typeof facultyData !== 'object') {
+      throw new Error('Faculty data is required');
+    }
+
+    if (!facultyData.email || typeof facultyData.email !== 'string') {
+      throw new Error('Valid email is required');
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(facultyData.email)) {
+      throw new Error('Invalid email format');
+    }
+
+    if (!facultyData.name || typeof facultyData.name !== 'string' || facultyData.name.trim().length === 0) {
+      throw new Error('Valid name is required');
+    }
+
+    // Check if email already exists
+    const existingFaculty = await Faculty.findOne({
+      where: { email: facultyData.email }
+    });
+    
+    if (existingFaculty) {
+      throw new Error('Faculty email already exists');
+    }
+
     const savedFaculty = await Faculty.create(facultyData);
     
     savedFaculty.password = this.generatePassword(savedFaculty.dob);

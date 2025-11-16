@@ -8,8 +8,33 @@ class AttendanceService {
    * @returns {Promise<Array>} Array of attendance records
    */
   async markBulkAttendance(request) {
+    // Input validation
+    if (!request || typeof request !== 'object') {
+      throw new Error('Request data is required');
+    }
+
     const { facultyEmail, subjectId, date, studentAttendances } = request;
     
+    if (!facultyEmail || !subjectId || !studentAttendances) {
+      throw new Error('Faculty email, subject ID, and student attendances are required');
+    }
+
+    if (!Array.isArray(studentAttendances) || studentAttendances.length === 0) {
+      throw new Error('Student attendances must be a non-empty array');
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(facultyEmail)) {
+      throw new Error('Invalid faculty email format');
+    }
+
+    // Validate subjectId
+    const subjectIdNum = parseInt(subjectId);
+    if (isNaN(subjectIdNum) || subjectIdNum <= 0) {
+      throw new Error('Subject ID must be a valid positive number');
+    }
+
     // Verify faculty exists
     const faculty = await Faculty.findOne({
       where: { email: facultyEmail }
@@ -34,6 +59,15 @@ class AttendanceService {
     const results = [];
 
     for (const sa of studentAttendances) {
+      // Validate student attendance object
+      if (!sa || !sa.studentEmail) {
+        throw new Error('Each attendance record must have a studentEmail');
+      }
+
+      if (!emailRegex.test(sa.studentEmail)) {
+        throw new Error(`Invalid student email format: ${sa.studentEmail}`);
+      }
+
       // Verify student exists
       const student = await Student.findOne({
         where: { email: sa.studentEmail }

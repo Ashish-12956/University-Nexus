@@ -92,6 +92,7 @@ router.post('/upload', verifyAdminAccess, upload.single('file'), async (req, res
   try {
     const { title } = req.body;
 
+    // File validation
     if (!req.file) {
       return res.status(400).json({
         status: 'error',
@@ -99,10 +100,26 @@ router.post('/upload', verifyAdminAccess, upload.single('file'), async (req, res
       });
     }
 
-    if (!title || title.trim().length === 0) {
+    // Validate file type (only PDF)
+    if (req.file.mimetype !== 'application/pdf') {
       return res.status(400).json({
         status: 'error',
-        message: 'Title is required'
+        message: 'Only PDF files are allowed'
+      });
+    }
+
+    // Title validation
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Title is required and must be a non-empty string'
+      });
+    }
+
+    if (title.length > 200) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Title must not exceed 200 characters'
       });
     }
 
@@ -200,6 +217,15 @@ router.get('/latest', verifyAuth, async (req, res) => {
 router.get('/:id', verifyAuth, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Input validation
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Valid calendar ID is required'
+      });
+    }
+
     const calendar = await Calendar.findByPk(id, {
       attributes: ['id', 'title', 'fileName', 'lastUpdated']
     });

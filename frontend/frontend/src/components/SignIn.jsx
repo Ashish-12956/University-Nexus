@@ -6,6 +6,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
 } from "../firebase";
+import { getApiUrl, API_ENDPOINTS } from "../config/api";
 import {
   AuthContainer,
   FormContainer,
@@ -28,18 +29,42 @@ const SignIn = () => {
     setIsLoading(true);
     setError("");
 
+    // Input validation
+    if (!email || !email.trim()) {
+      setError("Email is required");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password || !password.trim()) {
+      setError("Password is required");
+      setIsLoading(false);
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        email.trim(),
         password
       );
       const idToken = await userCredential.user.getIdToken();
 
       const response = await axios.post(
-        "http://localhost:8080/auth/login",
+        getApiUrl(API_ENDPOINTS.AUTH.LOGIN),
         { idToken },
-        { headers: { "Content-Type": "application/json" } }
+        { 
+          headers: { "Content-Type": "application/json" },
+          timeout: 10000 // 10 second timeout
+        }
       );
 
       if (response.data.status === "success") {
@@ -50,22 +75,58 @@ const SignIn = () => {
 
         navigate(
           response.data.redirectUrl ||
-            `/${response.data.role.toLowerCase}/dashboard`
+            `/${response.data.role.toLowerCase()}/dashboard`
         );
+      } else {
+        setError(response.data.message || "Login failed. Please try again.");
       }
     } catch (error) {
-      setError(error.message || "Login failed. Please try again.");
+      // Enhanced error handling
+      if (error.response) {
+        // Server responded with error status
+        setError(error.response.data?.message || "Login failed. Please check your credentials.");
+      } else if (error.request) {
+        // Request made but no response
+        setError("Unable to connect to server. Please check your internet connection.");
+      } else if (error.code === 'auth/user-not-found') {
+        setError("No account found with this email address.");
+      } else if (error.code === 'auth/wrong-password') {
+        setError("Incorrect password. Please try again.");
+      } else if (error.code === 'auth/invalid-email') {
+        setError("Invalid email address format.");
+      } else if (error.code === 'auth/too-many-requests') {
+        setError("Too many failed attempts. Please try again later.");
+      } else {
+        setError(error.message || "Login failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handlePasswordReset = async () => {
+    if (!email || !email.trim()) {
+      setError("Please enter your email address first");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email.trim());
       setError("Password reset email sent. Please check your inbox.");
     } catch (resetError) {
-      setError("Failed to send reset email. Please try again later.");
+      if (resetError.code === 'auth/user-not-found') {
+        setError("No account found with this email address.");
+      } else if (resetError.code === 'auth/invalid-email') {
+        setError("Invalid email address format.");
+      } else {
+        setError("Failed to send reset email. Please try again later.");
+      }
     }
   };
 

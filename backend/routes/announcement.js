@@ -74,10 +74,19 @@ router.post('/', verifyAdminAccess, async (req, res) => {
   try {
     const { message } = req.body;
 
-    if (!message || message.trim().length === 0) {
+    // Enhanced input validation
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({
         status: 'error',
-        message: 'Message is required'
+        message: 'Message is required and must be a non-empty string'
+      });
+    }
+
+    // Validate message length (max 5000 characters)
+    if (message.length > 5000) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Message must not exceed 5000 characters'
       });
     }
 
@@ -128,7 +137,26 @@ router.get('/', verifyAuth, async (req, res) => {
  */
 router.get('/paginated', verifyAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    let { page = 1, limit = 10 } = req.query;
+
+    // Input validation and sanitization
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    if (isNaN(page) || page < 1) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Page must be a positive integer'
+      });
+    }
+
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Limit must be between 1 and 100'
+      });
+    }
+
     const result = await AnnouncementService.getPaginatedAnnouncements(page, limit);
     
     res.json({
@@ -183,6 +211,15 @@ router.get('/current', verifyAuth, async (req, res) => {
 router.get('/:id', verifyAuth, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Input validation
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Valid announcement ID is required'
+      });
+    }
+
     const announcement = await AnnouncementService.getAnnouncementById(id);
     
     if (!announcement) {

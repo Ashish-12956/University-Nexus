@@ -42,6 +42,48 @@ const verifyFacultyAccess = async (req, res, next) => {
  */
 router.post('/bulk', verifyFacultyAccess, async (req, res) => {
   try {
+    const { facultyEmail, subjectId, date, studentAttendances } = req.body;
+
+    // Input validation
+    if (!facultyEmail || !subjectId || !studentAttendances) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Faculty email, subject ID, and student attendances are required'
+      });
+    }
+
+    if (!Array.isArray(studentAttendances) || studentAttendances.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Student attendances must be a non-empty array'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(facultyEmail)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid faculty email format'
+      });
+    }
+
+    // Validate subjectId is a number
+    if (isNaN(parseInt(subjectId))) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Subject ID must be a valid number'
+      });
+    }
+
+    // Validate date format if provided
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Date must be in YYYY-MM-DD format'
+      });
+    }
+
     const result = await AttendanceService.markBulkAttendance(req.body);
     
     res.json({
@@ -67,6 +109,21 @@ router.post('/bulk', verifyFacultyAccess, async (req, res) => {
 router.get('/subject/:subjectId/date/:date', verifyFacultyAccess, async (req, res) => {
   try {
     const { subjectId, date } = req.params;
+
+    // Input validation
+    if (isNaN(parseInt(subjectId))) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Subject ID must be a valid number'
+      });
+    }
+
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Date must be in YYYY-MM-DD format'
+      });
+    }
 
     // Get subject with enrolled students
     const subject = await SubjectEnrollment.findOne({
@@ -129,6 +186,23 @@ router.get('/subject/:subjectId/date/:date', verifyFacultyAccess, async (req, re
 router.get('/faculty/:email/subjects', verifyFacultyAccess, async (req, res) => {
   try {
     const { email } = req.params;
+
+    // Input validation
+    if (!email || typeof email !== 'string' || email.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Valid email is required'
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid email format'
+      });
+    }
+
     const subjects = await AttendanceService.getSubjectsByFaculty(email);
     
     res.json({
