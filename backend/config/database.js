@@ -1,12 +1,17 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+// Validate required environment variables
+if (!process.env.DB_PASSWORD) {
+  console.warn('Warning: DB_PASSWORD environment variable is not set. Database connection may fail.');
+}
+
 const sequelize = new Sequelize({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME || 'university',
   username: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'mayank@2446',
+  password: process.env.DB_PASSWORD, // Removed hardcoded password for security
   dialect: 'mysql',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {

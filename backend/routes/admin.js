@@ -96,10 +96,28 @@ router.post('/upload-student', async (req, res) => {
   try {
     const { name, email } = req.body;
 
+    // Enhanced input validation
     if (!name || !email) {
       return res.status(400).json({
         status: 'error',
         message: 'Name and email are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid email format'
+      });
+    }
+
+    // Validate name is not empty
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Name must be a non-empty string'
       });
     }
 

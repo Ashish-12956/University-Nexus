@@ -48,7 +48,23 @@ app.use('/uploads', express.static('uploads'));
 initializeFirebase();
 
 // Test database connection
-testConnection();
+testConnection().catch(err => {
+  console.error('Failed to establish database connection:', err);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1); // Exit in production if DB connection fails
+  }
+});
+
+// Validate critical environment variables
+const requiredEnvVars = ['DB_PASSWORD'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0 && process.env.NODE_ENV === 'production') {
+  console.error(`Error: Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  process.exit(1);
+} else if (missingEnvVars.length > 0) {
+  console.warn(`Warning: Missing environment variables: ${missingEnvVars.join(', ')}`);
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -71,10 +87,35 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  // Log error with more context
+  console.error('Error occurred:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.originalUrl,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+
+  // Handle specific error types
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+
+  if (err.name === 'UnauthorizedError' || err.status === 401) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'Unauthorized access'
+    });
+  }
+
+  res.status(err.status || 500).json({
     status: 'error',
-    message: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message
+    message: process.env.NODE_ENV === 'production' 
+      ? 'Something went wrong!' 
+      : err.message
   });
 });
 

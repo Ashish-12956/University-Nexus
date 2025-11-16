@@ -9,16 +9,34 @@ class AuthService {
    */
   async verifyTokenAndGetUser(idToken) {
     try {
+      if (!idToken || typeof idToken !== 'string') {
+        throw new Error('ID token is required and must be a string');
+      }
+
       const decodedToken = await verifyIdToken(idToken);
       const uid = decodedToken.uid;
       
+      if (!uid) {
+        throw new Error('Invalid token: UID not found in decoded token');
+      }
+
       const user = await User.findOne({
         where: { firebaseUid: uid }
       });
       
       return user;
     } catch (error) {
-      throw new Error('Invalid Firebase ID token');
+      // Provide more specific error messages
+      if (error.message.includes('ID token')) {
+        throw error;
+      }
+      if (error.code === 'auth/id-token-expired') {
+        throw new Error('Firebase ID token has expired. Please login again.');
+      }
+      if (error.code === 'auth/argument-error') {
+        throw new Error('Invalid Firebase ID token format');
+      }
+      throw new Error(`Authentication failed: ${error.message || 'Invalid Firebase ID token'}`);
     }
   }
 
@@ -30,8 +48,20 @@ class AuthService {
    */
   async verifyTokenAndCheckAccess(idToken, requestedFirebaseUid) {
     try {
+      if (!idToken || typeof idToken !== 'string') {
+        throw new Error('ID token is required and must be a string');
+      }
+
+      if (!requestedFirebaseUid || typeof requestedFirebaseUid !== 'string') {
+        throw new Error('Requested Firebase UID is required and must be a string');
+      }
+
       const decodedToken = await verifyIdToken(idToken);
       const tokenFirebaseUid = decodedToken.uid;
+
+      if (!tokenFirebaseUid) {
+        throw new Error('Invalid token: UID not found in decoded token');
+      }
 
       const user = await User.findOne({
         where: { firebaseUid: tokenFirebaseUid }
@@ -45,6 +75,10 @@ class AuthService {
         throw new Error('Access denied: You can only access your own data');
       }
     } catch (error) {
+      // Preserve original error message if it's already descriptive
+      if (error.message.includes('Access denied') || error.message.includes('User not found')) {
+        throw error;
+      }
       throw new Error(`Access verification failed: ${error.message}`);
     }
   }

@@ -11,10 +11,18 @@ router.post('/login', async (req, res) => {
   try {
     const { idToken } = req.body;
 
+    // Enhanced input validation
     if (!idToken) {
       return res.status(400).json({
         status: 'error',
         message: 'ID token is required'
+      });
+    }
+
+    if (typeof idToken !== 'string' || idToken.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'ID token must be a non-empty string'
       });
     }
 
@@ -116,10 +124,25 @@ router.post('/check-access', async (req, res) => {
   try {
     const { idToken, requestedFirebaseUid } = req.body;
 
+    // Enhanced input validation
     if (!idToken || !requestedFirebaseUid) {
       return res.status(400).json({
         status: 'error',
         message: 'ID token and requested Firebase UID are required'
+      });
+    }
+
+    if (typeof idToken !== 'string' || idToken.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'ID token must be a non-empty string'
+      });
+    }
+
+    if (typeof requestedFirebaseUid !== 'string' || requestedFirebaseUid.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Requested Firebase UID must be a non-empty string'
       });
     }
 
